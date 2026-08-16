@@ -1,0 +1,70 @@
+TravelerWayController - Endpoints (for curl)
+Base route: {BASE_URL}/api/travelerway/flight-booking
+
+Notes:
+- Replace {BASE_URL} with your API base (e.g., http://localhost:5000 or https://localhost:7243)
+- Use Content-Type: application/json for requests with a body
+
+1) POST /search
+URL: {BASE_URL}/api/travelerway/flight-booking/search?return_offers={true|false}&limit={n}&sort={value}&require_instant_payment={true|false}
+Body type: DuffelOfferReqRequest
+Minimal example body (JSON):
+{
+  "slices": [ { "origin": "JFK", "destination": "LHR", "departure_date": "2026-09-01" } ],
+  "passengers": [ { "given_name": "John", "family_name": "Doe", "type": "adult" } ],
+  "cabin_class": "economy"
+}
+Curl example:
+curl -X POST "{BASE_URL}/api/travelerway/flight-booking/search?return_offers=true&limit=10" \
+  -H "Content-Type: application/json" \
+  -d '@search.json'
+
+2) GET /offers
+URL: {BASE_URL}/api/travelerway/flight-booking/offers?offer_request_id={id}&limit={n}&max_connections={n}&sort={value}&require_instant_payments={true|false}
+Response type: DuffelResponseWithMetaData<DuffelPaginationFilters, IEnumerable<DuffelOfferResponse>>
+Curl example:
+curl "{BASE_URL}/api/travelerway/flight-booking/offers?offer_request_id=or_xxx&limit=10"
+
+3) GET /offers/{offerId}
+URL: {BASE_URL}/api/travelerway/flight-booking/offers/{offerId}?return_available_services={true|false}
+Response type: DuffelOfferResponse
+Curl example:
+curl "{BASE_URL}/api/travelerway/flight-booking/offers/of_xxx?return_available_services=true"
+
+4) GET /offers/{offerId}/available-services
+URL: {BASE_URL}/api/travelerway/flight-booking/offers/{offerId}/available-services?return_available_services={true|false}
+Response: available services for the offer (list of DuffelOfferService)
+Curl example:
+curl "{BASE_URL}/api/travelerway/flight-booking/offers/of_xxx/available-services"
+
+5) POST /offers/{offerId}/services/{serviceId}
+URL: {BASE_URL}/api/travelerway/flight-booking/offers/{offerId}/services/{serviceId}?quantity={n}
+Query: quantity (int, default 1)
+Body: none
+Response: updated DuffelOfferResponse
+Curl example:
+curl -X POST "{BASE_URL}/api/travelerway/flight-booking/offers/of_xxx/services/svc_xxx?quantity=1"
+
+6) POST /offers/{offerId}/payment-link
+URL: {BASE_URL}/api/travelerway/flight-booking/offers/{offerId}/payment-link
+Body: none
+Response: plain string URL (session.Url)
+Curl example:
+curl -X POST "{BASE_URL}/api/travelerway/flight-booking/offers/of_xxx/payment-link"
+
+7) POST /{offerId}/passengers/{passengerId}
+URL: {BASE_URL}/api/travelerway/flight-booking/{offerId}/passengers/{passengerId}
+Body type: DuffelPassengerRequest
+DuffelPassengerRequest JSON example:
+{
+  "given_name": "Jane",
+  "family_name": "Smith",
+  "loyalty_programme_accounts": [ { "airline_iata_code": "AA", "account_number": "123456" } ]
+}
+Response: DuffelPassengerResponse
+Curl example:
+curl -X POST "{BASE_URL}/api/travelerway/flight-booking/of_xxx/passengers/pax_xxx" \
+  -H "Content-Type: application/json" \
+  -d '@passenger.json'
+
+Reference: payload classes are in TravelerWay.Common/Payloads (DuffelOfferReqRequest, DuffelPassengerRequest, DuffelOfferResponse, etc.)
