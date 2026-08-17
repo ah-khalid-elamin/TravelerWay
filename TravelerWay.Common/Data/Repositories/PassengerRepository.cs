@@ -14,5 +14,11 @@ namespace TravelerWay.Common.Data.Repositories
         public PassengerRepository(TravelerWayDbContext context) : base(context)
         {
         }
+
+        public async Task<List<Passenger>> GetPassengersByBookingOfferIdAsync(string bookingOfferId)
+        {
+            var list = await GetAllAsync();
+            return  list.Where(p => p.BookingOfferId == bookingOfferId).ToList();
+        }
     }
 }

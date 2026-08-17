@@ -95,7 +95,7 @@ namespace TravelerWay.Common.Payloads
         public string? Email { get; set; }
 
         [JsonPropertyName("born_on")]
-        public DateOnly? BornOn { get; set; }
+        public string? BornOn { get; set; }
     }
     public class DuffelOfferPricingRequest
     {

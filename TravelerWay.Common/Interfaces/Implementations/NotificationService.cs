@@ -37,7 +37,7 @@ namespace TravelerWay.Common.Interfaces.Implementations
                 };
 
                 var response = await url
-                     .SetQueryParam("userId", userId)
+                     .SetQueryParam("user_id", userId)
                      .PostJsonAsync(request, cancellationToken: cancellationToken)
                      .ReceiveJson<IDictionary<string, object>>();
 

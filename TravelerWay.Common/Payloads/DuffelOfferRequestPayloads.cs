@@ -140,6 +140,9 @@ namespace TravelerWay.Common.Payloads
         [JsonPropertyName("fare_type")]
         public string? FareType { get; set; }
 
+        [JsonPropertyName("title")]
+        public string? Title { get; set; }
+
         [JsonPropertyName("family_name")]
         public string? FamilyName { get; set; }
 
@@ -148,12 +151,35 @@ namespace TravelerWay.Common.Payloads
 
         [JsonPropertyName("user_id")]
         public string? UserId { get; set; }
-
         [JsonPropertyName("age")]
         public int? Age { get; set; }
 
+        [JsonPropertyName("born_on")]
+        public string? BornOn { get; set; }
+
+        [JsonPropertyName("gender")]
+        public string? Gender { get; set; }
+
         [JsonPropertyName("type")]
         public string? Type { get; set; }
+
+        [JsonPropertyName("email")]
+        public string? Email { get; set; }
+
+        [JsonPropertyName("phone_number")]
+        public string? PhoneNumber { get; set; }
+
+        [JsonPropertyName("document_type")]
+        public string? DocumentType { get; set; }
+
+        [JsonPropertyName("document_number")]
+        public string? DocumentNumber { get; set; }
+
+        [JsonPropertyName("document_expiry")]
+        public string? DocumentExpiryDate { get; set; }
+
+        [JsonPropertyName("document_issuing_country")]
+        public string? DocumentIssuingCountry { get; set; }
 
         [JsonPropertyName("id")]
         public string? Id { get; set; }

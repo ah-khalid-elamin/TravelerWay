@@ -18,6 +18,7 @@ public class TravelerWayDbContext : DbContext
     public DbSet<OrderChange> OrderChanges { get; set; } = null!;
     public DbSet<AirlineCredit> AirlineCredits { get; set; } = null!;
     public DbSet<Payment> Payments { get; set; } = null!;
+    public DbSet<StripeEventLog> StripeEventLogs { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

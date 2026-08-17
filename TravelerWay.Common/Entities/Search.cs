@@ -13,7 +13,7 @@ public class Search
     public Guid UserId { get; set; }
     public User User { get; set; } = null!;
 
-    public string? OfferRequestId { get; set; }
+    public string? BookingOfferRequestId { get; set; }
 
     public string CabinClass { get; set; } = "economy"; // Economy | PremiumEconomy | Business | First
 

@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Mvc;
 using Stripe;
 using Stripe.Checkout;
+using TravelerWay.Common.Data.Repositories;
+using TravelerWay.Common.Entities;
 using TravelerWay.Common.Interfaces;
 using TravelerWay.Common.Payloads;
 
@@ -14,13 +16,15 @@ public class StripeController : ControllerBase
     private readonly IConfiguration _configuration;
     private readonly ITravelerWayService _travelerWayService;
     private readonly INotificationService _notificationService;
+    private readonly IStripeEventLogRepository _stripeEventLogRepository;
 
-    public StripeController(ILogger<StripeController> logger, IConfiguration configuration, ITravelerWayService travelerWayService, INotificationService notificationService)
+    public StripeController(ILogger<StripeController> logger, IConfiguration configuration, ITravelerWayService travelerWayService, INotificationService notificationService, IStripeEventLogRepository stripeEventLogRepository)
     {
         _logger = logger;
         _configuration = configuration;
         _travelerWayService = travelerWayService;
         _notificationService = notificationService;
+        _stripeEventLogRepository = stripeEventLogRepository;
     }
 
     [HttpPost("webhook")]
@@ -36,19 +40,30 @@ public class StripeController : ControllerBase
             var stripeEvent = EventUtility.ConstructEvent(json, stripeSignature, endpointSecret);
             _logger.LogInformation("Stripe event received: {EventType}", stripeEvent.Type);
 
+            var existingEventLog = await _stripeEventLogRepository.GetEventLogByEventIdAndNameAsync(stripeEvent.Id, stripeEvent.Type);
+
+            if (existingEventLog != null) return Ok(); // Event already processed, return early
+
             if (stripeEvent.Type == "checkout.session.completed")
             {
                 var session = stripeEvent.Data.Object as Session;
                 _logger.LogInformation("Payment succeeded for session {SessionId}", session?.Id);
 
-                var IdempotencyKey = session?.ClientReferenceId;
+                var offerId = session?.Metadata.FirstOrDefault().Value;
 
-                var offer = await _travelerWayService.GetOfferAsync(IdempotencyKey!);
+                var eventLog = new StripeEventLog
+                {
+                    Id = Guid.NewGuid(),
+                    StripeEventId = stripeEvent.Id,
+                    EventName = stripeEvent.Type,
+                    OfferId = offerId,
+                    ReceivedAt = DateTime.UtcNow
+                };
 
-                if (offer == null || offer?.Id == null) throw new StripeException("Offer not found.");
+                await _stripeEventLogRepository.AddAsync(eventLog);
+                await _stripeEventLogRepository.SaveChangesAsync();
 
-                var order = await _travelerWayService.CreateOrderWithBalanceAsync(offer?.Id!);
-
+                var order = await _travelerWayService.CreateOrderWithBalanceAsync(offerId!);
             }
 
             return Ok();

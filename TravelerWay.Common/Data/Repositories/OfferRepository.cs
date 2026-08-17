@@ -13,6 +13,15 @@ namespace TravelerWay.Common.Data.Repositories
     {
         public OfferRepository(TravelerWayDbContext context) : base(context)
         {
+
+
+        }
+        public async Task<Offer> GetOfferByBookingOfferIdAsync(string? bookingOfferId)
+        {
+            if (string.IsNullOrWhiteSpace(bookingOfferId)) throw new ArgumentException("The booking offer id can't be null");
+            var offers = await GetAllAsync();
+
+            return offers.ToList().Find(x => x.BookingOfferId == bookingOfferId)!;
         }
     }
 }

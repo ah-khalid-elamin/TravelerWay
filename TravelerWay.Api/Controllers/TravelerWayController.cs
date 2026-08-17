@@ -125,21 +125,21 @@ namespace TravelerWay.Api.Controllers
 
         }
 
-        [HttpPost("offers/{offerId}/payment-link")]
+        [HttpPost("payment-link")]
         public async Task<IActionResult> GeneratePaymentLinkAsync(
-            [FromRoute] string offerId,
+            [FromBody] PaymentLinkRequest request,
             CancellationToken cancellationToken = default)
         {
-            if (string.IsNullOrWhiteSpace(offerId))
+            if (string.IsNullOrWhiteSpace(request?.OfferId))
             {
                 return BadRequest("offerId is required.");
             }
 
 
-            var session = await _travelerWayService.GeneratePaymentLinkAsync(offerId, cancellationToken);
+            var session = await _travelerWayService.GeneratePaymentLinkAsync(request, cancellationToken);
             if (session == null)
             {
-                _logger.LogInformation("Payment session not created for offer: {OfferId}", offerId);
+                _logger.LogInformation("Payment session not created for offer: {OfferId}", request?.OfferId);
                 return NotFound();
             }
 

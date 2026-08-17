@@ -58,6 +58,10 @@ public class TravelerWayService : ITravelerWayService
         bool? requiresInstantPayment = null)
     {
 
+
+        if (offerReqRequest is null) throw new Exception("Invalid Search request: no search details were provided.");
+        if (offerReqRequest.Passengers.Count() == 0) throw new Exception("Invalid Search request: no passenger details were provided.");
+
         var offerRequest = await _duffelService.CreateOfferRequestAsync(offerReqRequest, returnOffers);
 
         if (offerRequest == null) throw new InvalidOperationException("Offer request creation failed.");
@@ -94,7 +98,7 @@ public class TravelerWayService : ITravelerWayService
         {
             Id = Guid.NewGuid(),
             UserId = userEntity.Id,
-            OfferRequestId = offerRequest.Id,
+            BookingOfferRequestId = offerRequest.Id,
             Sort = sort,
             MaxConnections = offerReqRequest?.MaxConnections,
             Origin = offerReqRequest?.Slices?.FirstOrDefault()?.Origin,
@@ -110,6 +114,7 @@ public class TravelerWayService : ITravelerWayService
             var offerEntity = new Entities.Offer
             {
                 Id = Guid.NewGuid(),
+                BookingOfferId = offer.Id,
                 SearchId = searchEntity.Id,
                 UserId = userEntity.Id,
             };
@@ -117,7 +122,6 @@ public class TravelerWayService : ITravelerWayService
             await _offerRepository.AddAsync(offerEntity);
 
         }
-
 
         await _userRepository.SaveChangesAsync();
         await _offerRepository.SaveChangesAsync();
@@ -208,20 +212,53 @@ public class TravelerWayService : ITravelerWayService
         return pricedOffer;
     }
 
-    public async Task<CheckoutSessionResponse?> GeneratePaymentLinkAsync(string offerId, CancellationToken cancellationToken = default)
+    public async Task<CheckoutSessionResponse?> GeneratePaymentLinkAsync(PaymentLinkRequest request, CancellationToken cancellationToken = default)
     {
-        var offer = await GetOfferAsync(offerId);
+        if (request == null) throw new ArgumentNullException("Invalid request: the payment request is null", nameof(request));
+
+        var offer = await GetOfferAsync(request?.OfferId!);
 
         if (offer == null)
-            throw new InvalidOperationException("Offer not found.");
+            throw new InvalidOperationException($"Invalid request: offer with id {request?.OfferId} not found.");
 
+        // Retrieve Search
+        var searchEntity = await _searchRepository.GetSearchByBookingOfferRequestIdAsync(request?.OfferRequestId!);
+
+        // save the passenger details in the database
+
+        foreach (var passenger in request?.Passengers!)
+        {
+            var passengerEntity = new Entities.Passenger()
+            {
+                Id = Guid.NewGuid(),
+                PassengerId = passenger.Id,
+                SearchId = searchEntity?.Id ?? Guid.Empty,
+                BookingOfferId = request?.OfferId!,
+                PassengerType = passenger.Type!,
+                Title = passenger.Title,
+                GivenName = passenger.GivenName,
+                FamilyName = passenger.FamilyName,
+                Gender = passenger.Gender,
+                BornOn = passenger.BornOn,
+                Email = passenger.Email,
+                PhoneNumber = passenger.PhoneNumber,
+                DocumentType = passenger.DocumentType,
+                DocumentNumber = passenger.DocumentNumber,
+                DocumentExpiryDate = passenger.DocumentExpiryDate,
+                DocumentIssuingCountry = passenger.DocumentIssuingCountry,
+            };
+            await _passengerRepository.AddAsync(passengerEntity);
+        }
+
+        await _passengerRepository.SaveChangesAsync();
 
         string offerTitle = $"{offer?.Slices?.FirstOrDefault()?.Origin?.Name} ({offer?.Slices?.FirstOrDefault()?.Origin?.IataCityCode}) to {offer?.Slices?.FirstOrDefault()?.Destination?.Name} ({offer?.Slices?.FirstOrDefault()?.Destination?.IataCityCode}) | " + (offer?.Slices?.Count > 1 ? "Round-Trip" : "One-Way");
-        string offerDescription = $"Departure: {offer?.Slices?.FirstOrDefault()?.Segments?.FirstOrDefault()?.DepartingAt} - Arrival: {offer?.Slices?.FirstOrDefault()?.Segments?.FirstOrDefault()?.ArrivingAt}\n" +
+        string offerDescription =  $"Departure: {offer?.Slices?.FirstOrDefault()?.Segments?.FirstOrDefault()?.DepartingAt} - Arrival: {offer?.Slices?.FirstOrDefault()?.Segments?.FirstOrDefault()?.ArrivingAt}\n" +
             $"Departure Terminal: {offer?.Slices?.FirstOrDefault()?.Segments?.FirstOrDefault()?.OriginTerminal} - Arrival Terminal: {offer?.Slices?.FirstOrDefault()?.Segments?.FirstOrDefault()?.DestinationTerminal}";
-        var request = new CheckoutSessionRequest
+
+        var checkoutSessionRequest = new CheckoutSessionRequest
         {
-            IdempotencyKey = offerId,
+            IdempotencyKey = request?.OfferId!,
             LineItems = new List<LineItem>
             {
                 new LineItem
@@ -247,9 +284,10 @@ public class TravelerWayService : ITravelerWayService
         };
 
 
-        var checkoutSession = await _stripeService.CreateCheckoutSessionAsync(request, cancellationToken);
+        var checkoutSession = await _stripeService.CreateCheckoutSessionAsync(checkoutSessionRequest, cancellationToken);
         if (checkoutSession == null)
-            _logger.LogWarning("CreateCheckoutSessionAsync returned null for request {@Request}", request);
+            _logger.LogWarning("CreateCheckoutSessionAsync returned null for request {@Request}", checkoutSessionRequest);
+
 
         return checkoutSession;
     }
@@ -271,6 +309,11 @@ public class TravelerWayService : ITravelerWayService
 
         var offer = await GetOfferAsync(offerId, true, cancellationToken);
 
+        // get passengers from the database using offerId
+
+        var passengers = await _passengerRepository.GetPassengersByBookingOfferIdAsync(offerId);
+
+
         var orderRequest = new DuffelOrderRequest
         {
             Type = "instant",
@@ -282,21 +325,28 @@ public class TravelerWayService : ITravelerWayService
                     Amount = offer?.TotalAmount
                 }
             },
-            Passengers = offer?.Passengers!,
+            Passengers = passengers.Select(p => new DuffelOfferPassenger
+            {
+                Id = p.PassengerId,
+                Title = p.Title,
+                Email = p.Email,
+                GivenName = p.GivenName,
+                FamilyName = p.FamilyName,
+                Gender = p.Gender,
+                BornOn = p.BornOn,
+                PhoneNumber = p.PhoneNumber
+            }).ToList(),
+
             Metadata = new Dictionary<string, object> { { "source", "TravelerWay" }, { "offer_id", offerId } }
         };
 
         var order = await _duffelService.CreateOrderAsync(orderRequest, cancellationToken);
 
-        var notificationRequest = new NotificationRequest<DuffelOrderResponse>
-        {
-            Context = "BookingConfirmation",
-            Data = order
-        };
+        var offerEntity = await _offerRepository.GetOfferByBookingOfferIdAsync(offerId);
 
-        //var offerEntity = await _offerRepository.GetByIdAsync(offerId);   
+        var userEntity = await _userRepository.GetByIdAsync(Guid.Parse(offerEntity?.UserId?.ToString()!));
 
-        //await _notificationService.SendNotificationAsync<DuffelOrderResponse>(notificationRequest, cancellationToken);
+        await _notificationService.SendNotificationAsync<DuffelOrderResponse>(userEntity?.ChatId!,"Booking Confirmation", order!, cancellationToken);
 
         return order;
 

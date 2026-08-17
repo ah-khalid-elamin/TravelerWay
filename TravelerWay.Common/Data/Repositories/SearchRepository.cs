@@ -13,6 +13,13 @@ namespace TravelerWay.Common.Data.Repositories
     {
         public SearchRepository(TravelerWayDbContext context) : base(context)
         {
+
+        }
+
+        public async Task<Search?> GetSearchByBookingOfferRequestIdAsync(string bookingOfferRequestId)
+        {
+            var list = await GetAllAsync();
+            return list.FirstOrDefault(s => s.BookingOfferRequestId == bookingOfferRequestId);
         }
     }
 }

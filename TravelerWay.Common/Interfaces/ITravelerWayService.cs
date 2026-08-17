@@ -17,7 +17,7 @@ public interface ITravelerWayService
     Task<IEnumerable<DuffelOfferService>?> ListOfferAvailableServicesAsync(string offerId, bool? returnAvailableServices = null);
     Task<DuffelOfferResponse> AddServiceAsync(string offerId, string serviceId, int quantity = 1);
 
-    Task<CheckoutSessionResponse?> GeneratePaymentLinkAsync(string offerId, CancellationToken cancellationToken = default);
+    Task<CheckoutSessionResponse?> GeneratePaymentLinkAsync(PaymentLinkRequest request, CancellationToken cancellationToken = default);
 
     Task<DuffelPassengerResponse?> UpdatePassengerAsync(string offerId, string offerPassengerId, DuffelPassengerRequest request, CancellationToken cancellationToken = default);
     Task<DuffelOrderResponse?> CreateOrderWithBalanceAsync(string offerId, CancellationToken cancellationToken = default);

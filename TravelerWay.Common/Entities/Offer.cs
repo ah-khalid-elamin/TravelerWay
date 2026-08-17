@@ -11,7 +11,7 @@ namespace TravelerWay.Common.Entities
     {
         [Key]
         public Guid Id { get; set; } = Guid.NewGuid();
-        public string? DuffelOfferId { get; set; }
+        public string? BookingOfferId { get; set; }
         public Guid? SearchId { get; set; }
         public Search? Search { get; set; }
         public Guid? UserId { get; set; }

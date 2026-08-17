@@ -7,8 +7,8 @@ using TravelerWay.Common.Entities;
 
 namespace TravelerWay.Common.Data.Repositories
 {
-    public interface IPassengerRepository : IRepository<Passenger>
+    public interface IStripeEventLogRepository : IRepository<StripeEventLog>
     {
-        Task<List<Passenger>> GetPassengersByBookingOfferIdAsync(string bookingOfferId);
+        Task<StripeEventLog?> GetEventLogByEventIdAndNameAsync(string eventId, string eventName);
     }
 }

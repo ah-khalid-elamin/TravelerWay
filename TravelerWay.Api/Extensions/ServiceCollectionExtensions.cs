@@ -29,6 +29,7 @@ public static class ServiceCollectionExtensions
         services.AddTransient<IAncillaryRepository, AncillaryRepository>();
         services.AddTransient<IPassengerRepository, PassengerRepository>();
         services.AddTransient<IPaymentRepository, PaymentRepository>();
+        services.AddTransient<IStripeEventLogRepository, StripeEventLogRepository>();
 
         // TravelerWay
         services.AddScoped<INotificationService, NotificationService>();

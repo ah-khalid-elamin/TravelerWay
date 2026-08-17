@@ -9,5 +9,6 @@ namespace TravelerWay.Common.Data.Repositories
 {
     public interface ISearchRepository : IRepository<Search>
     {
+        Task<Search?> GetSearchByBookingOfferRequestIdAsync(string bookingOfferRequestId);
     }
 }
